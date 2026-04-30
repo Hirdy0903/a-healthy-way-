@@ -1,488 +1,414 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { X, ArrowRight, Check, Play, Pause, RotateCcw, ThumbsUp, ThumbsDown, Pencil } from 'lucide-react';
-import interventionFlows from '@/services/interventionFlows';
-import useFollowup from '@/hooks/useFollowup';
-import useJournal from '@/hooks/useJournal';
+import React, { useState, useEffect } from 'react';
+import { X, ArrowRight, CheckCircle, Clock } from 'lucide-react';
 
-/**
- * InterventionMode — Full-screen guided intervention UI.
- * Renders steps sequentially from the flow config in interventionFlows.js.
- * Each step type has its own renderer. All logic is driven by data, not hardcoded.
- */
-export default function InterventionMode({ onClose }) {
-  const [selectedFlow, setSelectedFlow] = useState(null);
-  const [currentStep, setCurrentStep] = useState(0);
-  const { addFollowup } = useFollowup();
-  const { addEntry } = useJournal();
+// ─────────────────────────────────────────────
+// STEP 1: HARD-CODED FLOW CONFIG
+// Each flow is an ordered array of step objects.
+// ─────────────────────────────────────────────
+const FLOWS = {
+  anxietyFlow: [
+    { type: 'text',      content: "Let's slow things down together. You're safe right now." },
+    { type: 'breathing', content: 'Follow the circle — breathe in for 4 seconds, hold 4, out 4, hold 4.' },
+    { type: 'grounding', content: 'Look around you. Find 5 things you can see, 4 you can touch, 3 you can hear, 2 you can smell, and 1 good thing about yourself.' },
+    { type: 'text',      content: 'You did great. This feeling is temporary. Your nervous system is starting to settle.' },
+    { type: 'feedback' },
+  ],
+  lowMoodFlow: [
+    { type: 'text',    content: 'It is completely okay to feel this way. Your feelings are valid and I hear you.' },
+    { type: 'text',    content: 'Try one small thing right now: take a sip of water, or stand up and stretch for 10 seconds.' },
+    { type: 'journal', content: "Would you like to write down what's bothering you? Sometimes just getting it out helps.", placeholder: "I'm feeling down because..." },
+    { type: 'text',    content: "Thank you for sharing that. I'm proud of you for showing up for yourself today." },
+    { type: 'feedback' },
+  ],
+  overwhelmedFlow: [
+    { type: 'journal', content: 'What is the absolute biggest thing on your mind right now?', placeholder: 'Right now I am stressed about...' },
+    { type: 'text',    content: "OK. Let's put everything else on pause. Your only job right now is to find the one smallest possible next step." },
+    { type: 'timer',   content: "Let's focus on that single tiny step for just 5 minutes.", duration: 300 },
+    { type: 'text',    content: "Great job. You took the first step — that's usually the hardest part." },
+    { type: 'feedback' },
+  ],
+  focusFlow: [
+    { type: 'text',  content: "Quick distraction reset. Close your eyes, take one deep breath, and let go of whatever you were just looking at." },
+    { type: 'timer', content: '10 minutes of pure focus. No tabs, no phone. Just one task.', duration: 600 },
+    { type: 'text',  content: "Time's up! See? You can absolutely do this. Keep the momentum going." },
+    { type: 'feedback' },
+  ],
+};
 
-  // === FEELING SELECTION SCREEN ===
-  if (!selectedFlow) {
-    return (
-      <div className="fixed inset-0 z-[100] bg-slate-50 dark:bg-slate-900 flex items-center justify-center">
-        <button onClick={onClose} className="absolute top-6 right-6 p-2 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors">
-          <X className="w-6 h-6" />
+// ─────────────────────────────────────────────
+// STEP 2: HARD TOPIC → FLOW MAP (NO GUESSING)
+// ─────────────────────────────────────────────
+const TOPIC_TO_FLOW = {
+  anxiety:       'anxietyFlow',
+  low_mood:      'lowMoodFlow',
+  relationships: 'anxietyFlow',
+  career:        'overwhelmedFlow',
+  academic:      'overwhelmedFlow',
+  self:          'overwhelmedFlow',
+  identity:      'lowMoodFlow',
+};
+
+const TOPICS = [
+  { id: 'anxiety',       label: 'Anxiety / Stress',             emoji: '😰' },
+  { id: 'low_mood',      label: 'Low Mood',                     emoji: '🌧️' },
+  { id: 'relationships', label: 'Relationships',                emoji: '❤️' },
+  { id: 'career',        label: 'Career / Work',                emoji: '💼' },
+  { id: 'academic',      label: 'Academic Pressure',            emoji: '📚' },
+  { id: 'self',          label: 'Self Improvement',             emoji: '🌱' },
+  { id: 'identity',      label: 'Identity & Personal Concerns', emoji: '👤' },
+];
+
+// ─────────────────────────────────────────────
+// STEP RENDERERS
+// ─────────────────────────────────────────────
+
+function TextStep({ step, onNext }) {
+  return (
+    <div className="flex flex-col items-center justify-center text-center h-full px-4 animate-fade-in-up">
+      <p className="text-2xl sm:text-3xl font-bold text-slate-800 dark:text-slate-100 leading-snug mb-12 max-w-md">
+        {step.content}
+      </p>
+      <button
+        onClick={onNext}
+        className="px-8 py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full text-lg font-medium transition-all shadow-md flex items-center gap-2"
+      >
+        Continue <ArrowRight className="w-5 h-5" />
+      </button>
+    </div>
+  );
+}
+
+function BreathingStep({ step, onNext }) {
+  return (
+    <div className="flex flex-col items-center justify-center text-center h-full px-4 animate-fade-in-up">
+      <p className="text-xl font-semibold text-slate-700 dark:text-slate-200 mb-10 max-w-sm">{step.content}</p>
+      <div className="relative w-48 h-48 mb-12 flex items-center justify-center">
+        <div className="absolute inset-0 rounded-full border-4 border-indigo-200 dark:border-indigo-900/50" />
+        <div className="absolute inset-0 rounded-full bg-indigo-500/20 animate-ping" style={{ animationDuration: '8s' }} />
+        <div className="w-32 h-32 bg-gradient-to-br from-indigo-400 to-purple-500 rounded-full shadow-lg animate-pulse" style={{ animationDuration: '4s' }} />
+      </div>
+      <button
+        onClick={onNext}
+        className="px-8 py-4 bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 border-2 border-indigo-200 dark:border-indigo-700 hover:border-indigo-400 rounded-full text-lg font-medium transition-all"
+      >
+        I'm ready to continue
+      </button>
+    </div>
+  );
+}
+
+function GroundingStep({ step, onNext }) {
+  return (
+    <div className="flex flex-col items-center justify-center text-center h-full px-4 animate-fade-in-up">
+      <p className="text-2xl font-bold text-slate-800 dark:text-slate-100 mb-4">5-4-3-2-1 Grounding</p>
+      <p className="text-base text-slate-600 dark:text-slate-300 leading-relaxed mb-12 max-w-sm">{step.content}</p>
+      <button
+        onClick={onNext}
+        className="px-8 py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full text-lg font-medium transition-all shadow-md flex items-center gap-2"
+      >
+        Done <ArrowRight className="w-5 h-5" />
+      </button>
+    </div>
+  );
+}
+
+function JournalStep({ step, onNext, onSave }) {
+  const [value, setValue] = useState('');
+
+  const handleSubmit = () => {
+    if (value.trim()) onSave(value.trim());
+    onNext();
+  };
+
+  return (
+    <div className="flex flex-col items-center justify-center h-full px-4 animate-fade-in-up w-full max-w-lg mx-auto">
+      <p className="text-2xl font-bold text-slate-800 dark:text-slate-100 text-center mb-8">{step.content}</p>
+      <textarea
+        autoFocus
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        placeholder={step.placeholder || 'Type here...'}
+        className="w-full h-40 p-4 rounded-2xl bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 focus:border-indigo-500 dark:focus:border-indigo-400 outline-none resize-none text-slate-800 dark:text-slate-100 mb-6"
+      />
+      <button
+        onClick={handleSubmit}
+        className="px-8 py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full text-lg font-medium transition-all flex items-center gap-2"
+      >
+        {value.trim() ? 'Save & Continue' : 'Skip'} <ArrowRight className="w-5 h-5" />
+      </button>
+    </div>
+  );
+}
+
+function TimerStep({ step, onNext }) {
+  const [timeLeft, setTimeLeft] = useState(step.duration);
+  const [isActive, setIsActive] = useState(false);
+
+  useEffect(() => {
+    if (!isActive || timeLeft <= 0) return;
+    const interval = setInterval(() => setTimeLeft((t) => t - 1), 1000);
+    return () => clearInterval(interval);
+  }, [isActive, timeLeft]);
+
+  useEffect(() => {
+    if (timeLeft === 0) setIsActive(false);
+  }, [timeLeft]);
+
+  const minutes = Math.floor(timeLeft / 60);
+  const seconds = timeLeft % 60;
+  const progress = ((step.duration - timeLeft) / step.duration) * 100;
+  const circumference = 2 * Math.PI * 48;
+
+  return (
+    <div className="flex flex-col items-center justify-center text-center h-full px-4 animate-fade-in-up">
+      <p className="text-xl font-semibold text-slate-700 dark:text-slate-200 mb-10 max-w-sm">{step.content}</p>
+      <div className="relative w-64 h-64 mb-12 flex items-center justify-center">
+        <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 100 100">
+          <circle className="text-slate-200 dark:text-slate-700 stroke-current" strokeWidth="4" cx="50" cy="50" r="48" fill="transparent" />
+          <circle
+            className="text-indigo-500 stroke-current transition-all duration-1000 ease-linear"
+            strokeWidth="4" cx="50" cy="50" r="48" fill="transparent"
+            strokeDasharray={circumference}
+            strokeDashoffset={circumference - (circumference * progress) / 100}
+            strokeLinecap="round"
+          />
+        </svg>
+        <div className="text-5xl font-mono font-bold text-slate-800 dark:text-slate-100 tracking-tighter">
+          {String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}
+        </div>
+      </div>
+
+      {timeLeft === 0 ? (
+        <button onClick={onNext} className="px-8 py-4 bg-emerald-500 hover:bg-emerald-600 text-white rounded-full text-lg font-medium transition-all flex items-center gap-2">
+          <CheckCircle className="w-5 h-5" /> Done!
         </button>
+      ) : !isActive ? (
+        <button onClick={() => setIsActive(true)} className="px-8 py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full text-lg font-medium transition-all shadow-md flex items-center gap-2">
+          <Clock className="w-5 h-5" /> {timeLeft < step.duration ? 'Resume' : 'Start Timer'}
+        </button>
+      ) : (
+        <button onClick={() => setIsActive(false)} className="px-8 py-3 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-full font-medium transition-all">
+          Pause
+        </button>
+      )}
+    </div>
+  );
+}
 
-        <div className="max-w-md w-full px-6 text-center animate-page-enter">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-teal-500 to-cyan-600 flex items-center justify-center mx-auto mb-6 shadow-lg shadow-teal-500/20">
-            <span className="text-3xl">💙</span>
-          </div>
-          <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100 mb-2">What are you feeling right now?</h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mb-8">There are no wrong answers. Pick what resonates most.</p>
+function FeedbackStep({ onComplete }) {
+  return (
+    <div className="flex flex-col items-center justify-center text-center h-full px-4 animate-fade-in-up">
+      <p className="text-3xl font-bold text-slate-800 dark:text-slate-100 mb-10">Did this help?</p>
+      <div className="flex flex-col gap-3 w-full max-w-xs">
+        {['Yes, a lot 😊', 'A little bit 🙂', 'Not really 😔'].map((opt) => (
+          <button
+            key={opt}
+            onClick={() => onComplete(opt)}
+            className="px-6 py-4 bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 hover:border-indigo-400 dark:hover:border-indigo-500 text-slate-700 dark:text-slate-200 rounded-2xl text-lg font-medium transition-all"
+          >
+            {opt}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
 
-          <div className="space-y-3">
-            {Object.values(interventionFlows).map((flow) => (
-              <button
-                key={flow.id}
-                onClick={() => setSelectedFlow(flow)}
-                className="w-full flex items-center gap-4 p-4 rounded-2xl bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 hover:border-teal-400 dark:hover:border-teal-500 transition-all text-left group"
-              >
-                <span className="text-3xl">{flow.emoji}</span>
-                <span className="text-base font-medium text-slate-700 dark:text-slate-200 group-hover:text-teal-600 dark:group-hover:text-teal-400 transition-colors">{flow.label}</span>
-                <ArrowRight className="w-4 h-4 ml-auto text-slate-300 dark:text-slate-600 group-hover:text-teal-500 transition-colors" />
-              </button>
+// ─────────────────────────────────────────────
+// MAIN COMPONENT
+// ─────────────────────────────────────────────
+export default function InterventionMode({ onClose }) {
+  // STEP 1: Global state control
+  const [mode, setMode] = useState('selection'); // 'selection' | 'transitioning' | 'intervention' | 'complete'
+  const [selectedProblem, setSelectedProblem] = useState(null);
+  const [currentFlow, setCurrentFlow] = useState(null);
+  const [currentStepIndex, setCurrentStepIndex] = useState(0);
+
+  // STEP 3: Click handler — HARD MAP, no guessing
+  const handleTopicSelect = (topic) => {
+    const flowId = TOPIC_TO_FLOW[topic.id];
+
+    // STEP 7: Fail-safe
+    const resolvedFlow = FLOWS[flowId] || FLOWS.anxietyFlow;
+
+    // STEP 8: Debug logs
+    console.log('[InterventionMode] selectedProblem:', topic.id);
+    console.log('[InterventionMode] mappedFlowId:', flowId);
+    console.log('[InterventionMode] resolvedFlow steps:', resolvedFlow.length);
+
+    setSelectedProblem(topic.id);
+    setCurrentFlow(resolvedFlow);
+    setCurrentStepIndex(0);
+
+    // STEP 2: Enforce screen switch via transition state
+    setMode('transitioning');
+    setTimeout(() => {
+      setMode('intervention');
+    }, 1200);
+  };
+
+  const handleNextStep = () => {
+    const nextIndex = currentStepIndex + 1;
+    console.log('[InterventionMode] advancing to step:', nextIndex, 'of', currentFlow.length);
+
+    if (nextIndex >= currentFlow.length) {
+      setMode('complete');
+    } else {
+      setCurrentStepIndex(nextIndex);
+    }
+  };
+
+  const handleSaveJournal = (text) => {
+    try {
+      const existing = JSON.parse(localStorage.getItem('intervention_notes') || '[]');
+      existing.push({ text, problem: selectedProblem, timestamp: new Date().toISOString() });
+      localStorage.setItem('intervention_notes', JSON.stringify(existing));
+    } catch (e) {
+      console.warn('[InterventionMode] localStorage save failed:', e);
+    }
+  };
+
+  // STEP 9: Completion — store in localStorage
+  const handleCompletion = (rating) => {
+    try {
+      const existing = JSON.parse(localStorage.getItem('intervention_results') || '[]');
+      existing.push({ problem: selectedProblem, rating, timestamp: new Date().toISOString() });
+      localStorage.setItem('intervention_results', JSON.stringify(existing));
+    } catch (e) {
+      console.warn('[InterventionMode] result save failed:', e);
+    }
+    onClose();
+  };
+
+  // ─── RENDER: TRANSITIONING ───────────────────
+  if (mode === 'transitioning') {
+    return (
+      <div className="fixed inset-0 z-[100] bg-slate-50 dark:bg-slate-900 flex flex-col items-center justify-center p-6">
+        <div className="w-14 h-14 mb-8 rounded-full border-4 border-slate-200 dark:border-slate-700 border-t-indigo-500 animate-spin" />
+        <p className="text-xl sm:text-2xl font-medium text-slate-600 dark:text-slate-300 text-center leading-relaxed">
+          Got it. I'm here with you.<br />
+          Let's take this one step at a time.
+        </p>
+      </div>
+    );
+  }
+
+  // ─── RENDER: INTERVENTION FLOW ────────────────
+  if (mode === 'intervention') {
+    // STEP 7: Fail-safe guard
+    if (!currentFlow || !currentFlow[currentStepIndex]) {
+      console.error('[InterventionMode] FAIL-SAFE: flow or step is undefined, resetting to anxietyFlow');
+      setCurrentFlow(FLOWS.anxietyFlow);
+      setCurrentStepIndex(0);
+      return null;
+    }
+
+    const step = currentFlow[currentStepIndex];
+    console.log('[InterventionMode] rendering step index:', currentStepIndex, 'type:', step.type);
+
+    return (
+      <div className="fixed inset-0 z-[100] bg-slate-50 dark:bg-slate-900 flex flex-col">
+        {/* Progress header */}
+        <div className="h-16 flex items-center justify-between px-6 flex-shrink-0">
+          <div className="flex gap-2 items-center">
+            {currentFlow.map((_, i) => (
+              <div
+                key={i}
+                className={`h-1.5 rounded-full transition-all duration-500 ${
+                  i < currentStepIndex
+                    ? 'w-5 bg-indigo-300 dark:bg-indigo-700'
+                    : i === currentStepIndex
+                    ? 'w-6 bg-indigo-600'
+                    : 'w-2 bg-slate-200 dark:bg-slate-700'
+                }`}
+              />
             ))}
+            <span className="ml-2 text-xs text-slate-400">
+              {currentStepIndex + 1}/{currentFlow.length}
+            </span>
           </div>
+          <button
+            onClick={onClose}
+            className="p-2 rounded-xl text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors"
+          >
+            <X className="w-6 h-6" />
+          </button>
+        </div>
+
+        {/* Step content — keyed by index to force re-mount on step change */}
+        <div className="flex-1 overflow-hidden flex items-center justify-center" key={`step-${currentStepIndex}`}>
+          {/* STEP 6: Switch on step type — NO empty default */}
+          {step.type === 'text' && (
+            <TextStep step={step} onNext={handleNextStep} />
+          )}
+          {step.type === 'breathing' && (
+            <BreathingStep step={step} onNext={handleNextStep} />
+          )}
+          {step.type === 'grounding' && (
+            <GroundingStep step={step} onNext={handleNextStep} />
+          )}
+          {step.type === 'journal' && (
+            <JournalStep step={step} onNext={handleNextStep} onSave={handleSaveJournal} />
+          )}
+          {step.type === 'timer' && (
+            <TimerStep step={step} onNext={handleNextStep} />
+          )}
+          {step.type === 'feedback' && (
+            <FeedbackStep onComplete={handleCompletion} />
+          )}
+          {/* STEP 7: Fallback for unknown type */}
+          {!['text', 'breathing', 'grounding', 'journal', 'timer', 'feedback'].includes(step.type) && (
+            <TextStep step={{ content: step.content || 'Take a moment for yourself.' }} onNext={handleNextStep} />
+          )}
         </div>
       </div>
     );
   }
 
-  // === GUIDED FLOW ===
-  const flow = selectedFlow;
-  const step = flow.steps[currentStep];
-  const isLastStep = currentStep === flow.steps.length - 1;
-  const progress = ((currentStep + 1) / flow.steps.length) * 100;
-
-  const handleNext = () => {
-    if (isLastStep) {
-      onClose();
-    } else {
-      setCurrentStep((s) => s + 1);
-    }
-  };
-
-  const handleFollowup = (helpful) => {
-    addFollowup(flow.id, step.id, helpful);
-    onClose();
-  };
-
+  // ─── RENDER: SELECTION (default) ─────────────
   return (
-    <div className="fixed inset-0 z-[100] bg-slate-50 dark:bg-slate-900 flex flex-col">
-      {/* Minimal top bar */}
-      <div className="flex items-center justify-between px-6 py-4">
-        <div className="flex items-center gap-2">
-          <span className="text-lg">{flow.emoji}</span>
-          <span className="text-sm font-medium text-slate-500 dark:text-slate-400">{flow.label}</span>
-        </div>
-        <button onClick={onClose} className="p-2 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors">
-          <X className="w-5 h-5" />
-        </button>
-      </div>
-
-      {/* Progress bar */}
-      <div className="px-6">
-        <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-1">
-          <div className="bg-gradient-to-r from-teal-500 to-cyan-500 h-1 rounded-full transition-all duration-500" style={{ width: `${progress}%` }} />
-        </div>
-      </div>
-
-      {/* Step content */}
-      <div className="flex-1 flex items-center justify-center px-6 overflow-y-auto">
-        <div className="max-w-lg w-full py-8 animate-page-enter" key={`${flow.id}-${currentStep}`}>
-          <StepRenderer step={step} flow={flow} onNext={handleNext} onFollowup={handleFollowup} addJournalEntry={addEntry} />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// === STEP RENDERER ===
-function StepRenderer({ step, flow, onNext, onFollowup, addJournalEntry }) {
-  switch (step.type) {
-    case 'breathing': return <BreathingStep step={step} onNext={onNext} />;
-    case 'grounding': return <GroundingStep step={step} onNext={onNext} />;
-    case 'message': return <MessageStep step={step} onNext={onNext} />;
-    case 'followup': return <FollowupStep step={step} flow={flow} onFollowup={onFollowup} />;
-    case 'tiny-action': return <TinyActionStep step={step} onNext={onNext} />;
-    case 'journal-prompt': return <JournalPromptStep step={step} onNext={onNext} addJournalEntry={addJournalEntry} />;
-    case 'task-break': return <TaskBreakStep step={step} onNext={onNext} />;
-    case 'timer': return <TimerStep step={step} onNext={onNext} />;
-    case 'distraction-reset': return <DistractionResetStep step={step} onNext={onNext} />;
-    default: return <MessageStep step={step} onNext={onNext} />;
-  }
-}
-
-// --- Breathing Step ---
-function BreathingStep({ step, onNext }) {
-  const [isActive, setIsActive] = useState(false);
-  const [phase, setPhase] = useState('ready');
-  const [counter, setCounter] = useState(0);
-  const [cycle, setCycle] = useState(0);
-  const { inhale, hold, exhale, cycles } = step.config;
-  const intervalRef = useRef(null);
-
-  useEffect(() => {
-    if (!isActive) return;
-    let phaseIdx = 0;
-    const phases = [
-      { name: 'inhale', dur: inhale },
-      { name: 'hold', dur: hold },
-      { name: 'exhale', dur: exhale },
-    ];
-    let count = phases[0].dur;
-    let cyc = 0;
-    setPhase(phases[0].name);
-    setCounter(count);
-
-    intervalRef.current = setInterval(() => {
-      count--;
-      if (count <= 0) {
-        phaseIdx++;
-        if (phaseIdx >= phases.length) {
-          phaseIdx = 0;
-          cyc++;
-          setCycle(cyc);
-          if (cyc >= cycles) {
-            clearInterval(intervalRef.current);
-            setIsActive(false);
-            setPhase('done');
-            return;
-          }
-        }
-        count = phases[phaseIdx].dur;
-        setPhase(phases[phaseIdx].name);
-      }
-      setCounter(count);
-    }, 1000);
-
-    return () => clearInterval(intervalRef.current);
-  }, [isActive, inhale, hold, exhale, cycles]);
-
-  const phaseLabels = { inhale: 'Breathe In', hold: 'Hold', exhale: 'Breathe Out', ready: 'Ready?', done: 'Done ✓' };
-  const phaseColors = { inhale: 'border-blue-400 shadow-blue-200 dark:shadow-blue-900', hold: 'border-amber-400 shadow-amber-200 dark:shadow-amber-900', exhale: 'border-teal-400 shadow-teal-200 dark:shadow-teal-900', ready: 'border-slate-300', done: 'border-green-400 shadow-green-200' };
-  const phaseScale = { inhale: 'scale-125', hold: 'scale-125', exhale: 'scale-75', ready: 'scale-100', done: 'scale-100' };
-
-  return (
-    <div className="text-center">
-      <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-2">{step.title}</h2>
-      <p className="text-sm text-slate-500 dark:text-slate-400 mb-8">{step.subtitle}</p>
-
-      <div className={`w-40 h-40 rounded-full border-4 flex items-center justify-center mx-auto mb-6 transition-all duration-1000 shadow-lg ${phaseColors[phase]} ${phaseScale[phase]}`}>
-        <div className="text-center">
-          <p className="text-4xl font-bold text-slate-800 dark:text-slate-100">{phase === 'done' ? '✓' : counter}</p>
-          <p className="text-xs font-medium text-slate-500 mt-1">{phaseLabels[phase]}</p>
-        </div>
-      </div>
-
-      {!isActive && phase !== 'done' && (
-        <p className="text-xs text-slate-400 mb-4">Cycle {cycle + 1} of {cycles}</p>
-      )}
-
-      {phase === 'done' ? (
-        <button onClick={onNext} className="px-8 py-3 rounded-2xl bg-teal-600 text-white text-sm font-medium hover:bg-teal-700 transition-colors flex items-center gap-2 mx-auto">
-          Continue <ArrowRight className="w-4 h-4" />
-        </button>
-      ) : !isActive ? (
-        <button onClick={() => setIsActive(true)} className="px-8 py-3 rounded-2xl bg-teal-600 text-white text-sm font-medium hover:bg-teal-700 transition-colors flex items-center gap-2 mx-auto">
-          <Play className="w-4 h-4" /> Start Breathing
-        </button>
-      ) : null}
-    </div>
-  );
-}
-
-// --- Grounding Step ---
-function GroundingStep({ step, onNext }) {
-  const [senseIdx, setSenseIdx] = useState(0);
-  const senses = step.config.senses;
-  const current = senses[senseIdx];
-  const senseEmoji = { SEE: '👁️', TOUCH: '✋', HEAR: '👂', SMELL: '👃', TASTE: '👅' };
-
-  return (
-    <div className="text-center">
-      <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-2">{step.title}</h2>
-      <p className="text-sm text-slate-500 dark:text-slate-400 mb-8">{step.subtitle}</p>
-
-      <div className="mb-6">
-        <span className="text-5xl mb-3 block">{senseEmoji[current.sense]}</span>
-        <p className="text-4xl font-bold text-slate-800 dark:text-slate-100 mb-2">{current.count}</p>
-        <p className="text-base text-slate-600 dark:text-slate-400">{current.prompt}</p>
-      </div>
-
-      <div className="flex gap-2 justify-center mb-8">
-        {senses.map((_, i) => (
-          <div key={i} className={`w-2.5 h-2.5 rounded-full transition-colors ${i <= senseIdx ? 'bg-teal-500' : 'bg-slate-200 dark:bg-slate-600'}`} />
-        ))}
-      </div>
-
+    <div className="fixed inset-0 z-[100] bg-slate-50 dark:bg-slate-900 flex items-center justify-center">
       <button
-        onClick={() => senseIdx < senses.length - 1 ? setSenseIdx((s) => s + 1) : onNext()}
-        className="px-8 py-3 rounded-2xl bg-teal-600 text-white text-sm font-medium hover:bg-teal-700 transition-colors flex items-center gap-2 mx-auto"
+        onClick={onClose}
+        className="absolute top-6 right-6 p-2 rounded-xl text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors"
       >
-        {senseIdx < senses.length - 1 ? <>Next Sense <ArrowRight className="w-4 h-4" /></> : <>Continue <ArrowRight className="w-4 h-4" /></>}
+        <X className="w-6 h-6" />
       </button>
-    </div>
-  );
-}
 
-// --- Message Step ---
-function MessageStep({ step, onNext }) {
-  return (
-    <div className="text-center">
-      <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-3">{step.title}</h2>
-      <p className="text-base text-slate-600 dark:text-slate-400 leading-relaxed mb-4">{step.subtitle}</p>
-      {step.supportText && (
-        <p className="text-sm text-slate-500 dark:text-slate-500 italic mb-8">{step.supportText}</p>
-      )}
-      <button onClick={onNext} className="px-8 py-3 rounded-2xl bg-teal-600 text-white text-sm font-medium hover:bg-teal-700 transition-colors flex items-center gap-2 mx-auto">
-        Continue <ArrowRight className="w-4 h-4" />
-      </button>
-    </div>
-  );
-}
-
-// --- Follow-up Step ---
-function FollowupStep({ step, flow, onFollowup }) {
-  return (
-    <div className="text-center">
-      <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-3">{step.title}</h2>
-      <p className="text-sm text-slate-500 dark:text-slate-400 mb-8">{step.subtitle}</p>
-
-      <div className="flex gap-4 justify-center">
-        <button onClick={() => onFollowup(true)} className="flex flex-col items-center gap-2 px-8 py-5 rounded-2xl bg-green-50 dark:bg-green-900/20 border-2 border-green-200 dark:border-green-800 hover:border-green-400 transition-all">
-          <ThumbsUp className="w-8 h-8 text-green-500" />
-          <span className="text-sm font-medium text-green-700 dark:text-green-300">Yes, it helped</span>
-        </button>
-        <button onClick={() => onFollowup(false)} className="flex flex-col items-center gap-2 px-8 py-5 rounded-2xl bg-slate-50 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 hover:border-slate-400 transition-all">
-          <ThumbsDown className="w-8 h-8 text-slate-400" />
-          <span className="text-sm font-medium text-slate-500">Not really</span>
-        </button>
-      </div>
-
-      <p className="text-xs text-slate-400 mt-6">Your response helps us personalize future suggestions.</p>
-    </div>
-  );
-}
-
-// --- Tiny Action Step ---
-function TinyActionStep({ step, onNext }) {
-  const [selected, setSelected] = useState(null);
-
-  return (
-    <div className="text-center">
-      <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-2">{step.title}</h2>
-      <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">{step.subtitle}</p>
-
-      <div className="space-y-2 mb-6">
-        {step.actions.map((action, i) => (
-          <button
-            key={i}
-            onClick={() => setSelected(i)}
-            className={`w-full flex items-center gap-4 p-4 rounded-2xl border-2 text-left transition-all ${
-              selected === i
-                ? 'border-teal-500 bg-teal-50 dark:bg-teal-900/20'
-                : 'border-slate-200 dark:border-slate-700 hover:border-slate-300'
-            }`}
-          >
-            <span className="text-2xl">{action.emoji}</span>
-            <div>
-              <p className="text-sm font-medium text-slate-700 dark:text-slate-200">{action.text}</p>
-              <p className="text-xs text-slate-400">{action.detail}</p>
-            </div>
-            {selected === i && <Check className="w-5 h-5 text-teal-500 ml-auto" />}
-          </button>
-        ))}
-      </div>
-
-      <button
-        onClick={onNext}
-        disabled={selected === null}
-        className="px-8 py-3 rounded-2xl bg-teal-600 text-white text-sm font-medium hover:bg-teal-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center gap-2 mx-auto"
-      >
-        I did it <ArrowRight className="w-4 h-4" />
-      </button>
-    </div>
-  );
-}
-
-// --- Journal Prompt Step ---
-function JournalPromptStep({ step, onNext, addJournalEntry }) {
-  const [text, setText] = useState('');
-
-  const handleSave = () => {
-    if (text.trim()) {
-      addJournalEntry({ content: text.trim(), template: 'freeform', tags: ['intervention'], mood: null });
-    }
-    onNext();
-  };
-
-  return (
-    <div className="text-center">
-      <Pencil className="w-8 h-8 text-slate-300 mx-auto mb-4" />
-      <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-2">{step.title}</h2>
-      <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">{step.subtitle}</p>
-
-      <textarea
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        placeholder={step.prompt}
-        rows={5}
-        className="w-full p-4 rounded-2xl bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 text-sm text-slate-700 dark:text-slate-200 placeholder-slate-400 outline-none focus:border-teal-500 resize-none mb-6"
-      />
-
-      <div className="flex gap-3 justify-center">
-        {step.optional && (
-          <button onClick={onNext} className="px-6 py-3 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-500 text-sm font-medium hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
-            Skip
-          </button>
-        )}
-        <button onClick={handleSave} className="px-6 py-3 rounded-2xl bg-teal-600 text-white text-sm font-medium hover:bg-teal-700 transition-colors flex items-center gap-2">
-          {text.trim() ? 'Save & Continue' : 'Continue'} <ArrowRight className="w-4 h-4" />
-        </button>
-      </div>
-    </div>
-  );
-}
-
-// --- Task Break Step ---
-function TaskBreakStep({ step, onNext }) {
-  const [task, setTask] = useState('');
-  const [firstStep, setFirstStep] = useState('');
-
-  return (
-    <div className="text-center">
-      <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-2">{step.title}</h2>
-      <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">{step.subtitle}</p>
-
-      <div className="space-y-4 mb-6 text-left">
-        <div>
-          <label className="text-xs font-medium text-slate-500 mb-1 block">What's overwhelming you?</label>
-          <input
-            type="text"
-            value={task}
-            onChange={(e) => setTask(e.target.value)}
-            placeholder="e.g., I have too much homework"
-            className="w-full p-3 rounded-xl bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 text-sm text-slate-700 dark:text-slate-200 placeholder-slate-400 outline-none focus:border-teal-500"
-          />
+      <div className="max-w-md w-full px-6 text-center">
+        <div className="w-16 h-16 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center mx-auto mb-6">
+          <span className="text-3xl">💬</span>
         </div>
-        <div>
-          <label className="text-xs font-medium text-slate-500 mb-1 block">What's the tiniest first step?</label>
-          <input
-            type="text"
-            value={firstStep}
-            onChange={(e) => setFirstStep(e.target.value)}
-            placeholder="e.g., Open the assignment page"
-            className="w-full p-3 rounded-xl bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 text-sm text-slate-700 dark:text-slate-200 placeholder-slate-400 outline-none focus:border-teal-500"
-          />
-        </div>
-      </div>
 
-      <button
-        onClick={onNext}
-        disabled={!firstStep.trim()}
-        className="px-8 py-3 rounded-2xl bg-teal-600 text-white text-sm font-medium hover:bg-teal-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center gap-2 mx-auto"
-      >
-        Let's do it <ArrowRight className="w-4 h-4" />
-      </button>
-    </div>
-  );
-}
+        <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100 mb-2">
+          What would you like support with today?
+        </h1>
+        <p className="text-sm text-slate-500 dark:text-slate-400 mb-8">
+          Select a topic and I'll guide you through it, one step at a time.
+        </p>
 
-// --- Timer Step ---
-function TimerStep({ step, onNext }) {
-  const totalSeconds = step.config.minutes * 60;
-  const [remaining, setRemaining] = useState(totalSeconds);
-  const [isRunning, setIsRunning] = useState(false);
-  const [isDone, setIsDone] = useState(false);
-  const intervalRef = useRef(null);
-
-  useEffect(() => {
-    if (!isRunning) return;
-    intervalRef.current = setInterval(() => {
-      setRemaining((prev) => {
-        if (prev <= 1) {
-          clearInterval(intervalRef.current);
-          setIsRunning(false);
-          setIsDone(true);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-    return () => clearInterval(intervalRef.current);
-  }, [isRunning]);
-
-  const mins = Math.floor(remaining / 60);
-  const secs = remaining % 60;
-  const progress = ((totalSeconds - remaining) / totalSeconds) * 100;
-
-  return (
-    <div className="text-center">
-      <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-2">{step.title}</h2>
-      <p className="text-sm text-slate-500 dark:text-slate-400 mb-8">{step.subtitle}</p>
-
-      <div className="relative w-48 h-48 mx-auto mb-6">
-        <svg className="w-48 h-48 transform -rotate-90" viewBox="0 0 200 200">
-          <circle cx="100" cy="100" r="90" fill="none" stroke="currentColor" strokeWidth="6" className="text-slate-200 dark:text-slate-700" />
-          <circle cx="100" cy="100" r="90" fill="none" stroke="url(#timerGrad)" strokeWidth="6" strokeLinecap="round" strokeDasharray={`${2 * Math.PI * 90}`} strokeDashoffset={`${2 * Math.PI * 90 * (1 - progress / 100)}`} className="transition-all duration-1000" />
-          <defs><linearGradient id="timerGrad" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stopColor="#14b8a6" /><stop offset="100%" stopColor="#06b6d4" /></linearGradient></defs>
-        </svg>
-        <div className="absolute inset-0 flex items-center justify-center">
-          <p className="text-4xl font-bold text-slate-800 dark:text-slate-100 font-mono">{String(mins).padStart(2, '0')}:{String(secs).padStart(2, '0')}</p>
-        </div>
-      </div>
-
-      {isDone ? (
-        <button onClick={onNext} className="px-8 py-3 rounded-2xl bg-teal-600 text-white text-sm font-medium hover:bg-teal-700 transition-colors flex items-center gap-2 mx-auto">
-          Continue <ArrowRight className="w-4 h-4" />
-        </button>
-      ) : (
-        <div className="flex gap-3 justify-center">
-          <button onClick={() => setIsRunning(!isRunning)} className={`px-6 py-3 rounded-2xl text-sm font-medium flex items-center gap-2 transition-colors ${isRunning ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/20 dark:text-amber-300' : 'bg-teal-600 text-white hover:bg-teal-700'}`}>
-            {isRunning ? <><Pause className="w-4 h-4" /> Pause</> : <><Play className="w-4 h-4" /> {remaining < totalSeconds ? 'Resume' : 'Start'}</>}
-          </button>
-          {!isRunning && remaining < totalSeconds && (
-            <button onClick={() => { setRemaining(totalSeconds); setIsDone(false); }} className="px-4 py-3 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-500 text-sm hover:bg-slate-200 dark:hover:bg-slate-700">
-              <RotateCcw className="w-4 h-4" />
+        <div className="flex flex-col gap-3 max-h-[50vh] overflow-y-auto pb-2 px-1">
+          {TOPICS.map((topic) => (
+            <button
+              key={topic.id}
+              onClick={() => handleTopicSelect(topic)}
+              className="flex items-center gap-4 p-4 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-indigo-400 dark:hover:border-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/10 transition-all text-left group"
+            >
+              <span className="text-2xl">{topic.emoji}</span>
+              <span className="text-sm font-medium text-slate-700 dark:text-slate-200 group-hover:text-indigo-700 dark:group-hover:text-indigo-300 transition-colors">
+                {topic.label}
+              </span>
+              <ArrowRight className="w-4 h-4 ml-auto text-slate-300 group-hover:text-indigo-400 transition-colors" />
             </button>
-          )}
+          ))}
         </div>
-      )}
-    </div>
-  );
-}
 
-// --- Distraction Reset Step ---
-function DistractionResetStep({ step, onNext }) {
-  const [checked, setChecked] = useState(step.resetSteps.map(() => false));
-  const allChecked = checked.every(Boolean);
-
-  const toggle = (i) => setChecked((prev) => prev.map((v, j) => j === i ? !v : v));
-
-  return (
-    <div className="text-center">
-      <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-2">{step.title}</h2>
-      <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">{step.subtitle}</p>
-
-      <div className="space-y-3 mb-8 text-left">
-        {step.resetSteps.map((rs, i) => (
-          <button key={i} onClick={() => toggle(i)} className={`w-full flex items-center gap-3 p-4 rounded-2xl border-2 transition-all ${checked[i] ? 'border-teal-500 bg-teal-50 dark:bg-teal-900/20' : 'border-slate-200 dark:border-slate-700'}`}>
-            <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${checked[i] ? 'border-teal-500 bg-teal-500' : 'border-slate-300 dark:border-slate-600'}`}>
-              {checked[i] && <Check className="w-3.5 h-3.5 text-white" />}
-            </div>
-            <span className={`text-sm ${checked[i] ? 'text-teal-700 dark:text-teal-300 line-through' : 'text-slate-600 dark:text-slate-400'}`}>{rs}</span>
-          </button>
-        ))}
+        <div className="mt-6 pt-5 border-t border-slate-200 dark:border-slate-700">
+          <p className="text-xs text-slate-400 dark:text-slate-500 flex items-center justify-center gap-1.5">
+            <span>🔒</span> Your responses are strictly private and stored only on your device.
+          </p>
+        </div>
       </div>
-
-      <button
-        onClick={onNext}
-        disabled={!allChecked}
-        className="px-8 py-3 rounded-2xl bg-teal-600 text-white text-sm font-medium hover:bg-teal-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center gap-2 mx-auto"
-      >
-        I'm ready to focus <ArrowRight className="w-4 h-4" />
-      </button>
     </div>
   );
 }

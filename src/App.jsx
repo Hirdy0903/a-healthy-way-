@@ -1,7 +1,11 @@
 import React from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { ThemeProvider } from '@/components/layout/ThemeProvider';
+import { AuthProvider } from '@/hooks/useAuth';
+import AuthGuard from '@/components/layout/AuthGuard';
 import Layout from '@/components/layout/Layout';
+import LoginPage from '@/pages/Login';
+import RegisterPage from '@/pages/Register';
 import DashboardPage from '@/pages/DashboardPage';
 import KnowledgeBasePage from '@/pages/KnowledgeBasePage';
 import ConditionDetailPage from '@/pages/ConditionDetailPage';
@@ -20,9 +24,16 @@ import ProgramDetailPage from '@/pages/ProgramDetailPage';
 export default function App() {
   return (
     <ThemeProvider>
-      <Routes>
-        <Route path="/" element={<Layout />}>
-          <Route index element={<DashboardPage />} />
+      <AuthProvider>
+        <Routes>
+          {/* Public Routes */}
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
+          
+          {/* Protected Routes */}
+          <Route element={<AuthGuard />}>
+            <Route path="/" element={<Layout />}>
+              <Route index element={<DashboardPage />} />
           <Route path="conditions" element={<KnowledgeBasePage />} />
           <Route path="conditions/:id" element={<ConditionDetailPage />} />
           <Route path="lifestyle" element={<LifestyleFactorsPage />} />
@@ -35,9 +46,11 @@ export default function App() {
           <Route path="problems/:id" element={<ProblemDetailPage />} />
           <Route path="emergency" element={<EmergencyPage />} />
           <Route path="programs" element={<ProgramsPage />} />
-          <Route path="programs/:id" element={<ProgramDetailPage />} />
-        </Route>
-      </Routes>
+              <Route path="programs/:id" element={<ProgramDetailPage />} />
+            </Route>
+          </Route>
+        </Routes>
+      </AuthProvider>
     </ThemeProvider>
   );
 }

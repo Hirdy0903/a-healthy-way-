@@ -1,19 +1,31 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
-import { Heart, TrendingUp, BookOpen, Sparkles, AlertTriangle, ArrowRight, Calendar, Brain, ClipboardList, Lightbulb } from 'lucide-react';
+import { Heart, TrendingUp, BookOpen, Sparkles, AlertTriangle, ArrowRight, Calendar, Brain, ClipboardList, Lightbulb, ShieldCheck, MessageCircle } from 'lucide-react';
 import useMoodData from '@/hooks/useMoodData';
 import useJournal from '@/hooks/useJournal';
 import useAssessmentResults from '@/hooks/useAssessmentResults';
 import useMentalStateEngine from '@/hooks/useMentalStateEngine';
+import { useAuth } from '@/hooks/useAuth';
 import dailyTips from '@/data/dailyTips';
 import { formatDate, getRelativeTime } from '@/utils/dateUtils';
+import InterventionMode from '@/components/InterventionMode/InterventionMode';
 
 export default function DashboardPage() {
   const { entries: moodEntries, trends, patterns, getRecentEntries } = useMoodData();
   const { getRecentEntries: getRecentJournals } = useJournal();
   const { getLatestResult, crisisIndicators } = useAssessmentResults();
   const mentalState = useMentalStateEngine();
+  const { user } = useAuth();
+  const [interventionOpen, setInterventionOpen] = useState(false);
+
+  const [loadingWidgets, setLoadingWidgets] = useState(true);
+
+  // Simulate soft loading state for skeletons
+  useEffect(() => {
+    const timer = setTimeout(() => setLoadingWidgets(false), 1200);
+    return () => clearTimeout(timer);
+  }, []);
 
   // Get daily tip based on date
   const todayTip = dailyTips[new Date().getDate() % dailyTips.length];
@@ -34,14 +46,71 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6 animate-page-enter">
-      {/* Welcome header */}
-      <div>
-        <h1 className="text-2xl sm:text-3xl font-bold text-slate-800 dark:text-slate-100">
-          Welcome to MindWell 👋
-        </h1>
-        <p className="text-slate-500 dark:text-slate-400 mt-1">
-          Your personal mental health companion. Here's your overview.
-        </p>
+      {/* Intervention Mode overlay */}
+      {interventionOpen && (
+        <InterventionMode onClose={() => setInterventionOpen(false)} />
+      )}
+
+      {/* ── PROMINENT SUPPORT HERO CARD ─────────────────── */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-600 via-indigo-700 to-purple-800 p-6 sm:p-8 shadow-lg">
+        {/* Decorative blobs */}
+        <div className="absolute -top-8 -right-8 w-40 h-40 rounded-full bg-white/5" />
+        <div className="absolute bottom-0 left-20 w-24 h-24 rounded-full bg-white/5" />
+
+        <div className="relative flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+          <div>
+            <p className="text-indigo-200 text-sm font-medium mb-1">Need to talk?</p>
+            <h2 className="text-2xl sm:text-3xl font-bold text-white leading-tight">
+              How are you feeling right now?
+            </h2>
+            <p className="text-indigo-200 text-sm mt-2 max-w-sm">
+              Pick what's on your mind and I'll guide you through it — one step at a time. Private & judgment-free.
+            </p>
+          </div>
+          <button
+            onClick={() => setInterventionOpen(true)}
+            className="flex-shrink-0 flex items-center gap-3 px-6 py-4 bg-white hover:bg-indigo-50 text-indigo-700 font-semibold rounded-2xl shadow-md transition-all hover:scale-105 active:scale-95"
+          >
+            <MessageCircle className="w-5 h-5" />
+            Get Support Now
+          </button>
+        </div>
+
+        {/* Quick topic chips */}
+        <div className="relative mt-5 flex flex-wrap gap-2">
+          {[
+            { label: 'Anxiety', emoji: '😰' },
+            { label: 'Low Mood', emoji: '🌧️' },
+            { label: 'Overwhelmed', emoji: '📚' },
+            { label: 'Relationships', emoji: '❤️' },
+            { label: 'Career', emoji: '💼' },
+          ].map((chip) => (
+            <button
+              key={chip.label}
+              onClick={() => setInterventionOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/15 hover:bg-white/25 text-white text-xs font-medium transition-all"
+            >
+              <span>{chip.emoji}</span> {chip.label}
+            </button>
+          ))}
+        </div>
+      </div>
+      {/* Live Activity & Welcome Section */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">
+            Welcome back, {user?.name?.split(' ')[0] || 'Friend'} 👋
+          </h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Here's how you've been doing lately.</p>
+        </div>
+        
+        {/* Ethical Reassurance Widget */}
+        <div className="flex items-center gap-3 px-4 py-2.5 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-full">
+          <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+          <span className="text-xs font-medium text-slate-600 dark:text-slate-300">
+            This space is private and judgment-free. It's okay to ask for help.
+          </span>
+        </div>
       </div>
 
       {/* Crisis alert */}
@@ -217,55 +286,72 @@ export default function DashboardPage() {
             </span>
           )}
         </div>
-        
-        {/* Insight Layer */}
-        {mentalState.reasons.length > 0 && (
-          <div className="mb-4 p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 flex items-start gap-3">
-            <Brain className="w-4 h-4 text-violet-500 mt-0.5 flex-shrink-0" />
-            <div>
-              <p className="text-xs font-medium text-slate-700 dark:text-slate-300">Why you're seeing this plan:</p>
-              <ul className="mt-1 space-y-0.5">
-                {mentalState.reasons.slice(0, 2).map((reason, i) => (
-                  <li key={i} className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
-                    <span className="w-1 h-1 rounded-full bg-violet-400" /> {reason}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-        )}
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          {mentalState.dailyPlan.map((action, i) => (
-            <div key={i} className={`p-4 rounded-xl border-2 transition-all card-hover ${
-              action.type === 'regulation' ? 'bg-teal-50 dark:bg-teal-900/10 border-teal-100 dark:border-teal-800' :
-              action.type === 'productivity' ? 'bg-blue-50 dark:bg-blue-900/10 border-blue-100 dark:border-blue-800' :
-              'bg-violet-50 dark:bg-violet-900/10 border-violet-100 dark:border-violet-800'
-            }`}>
-              <div className="flex items-start gap-3">
-                <span className="text-2xl">{action.icon}</span>
-                <div className="flex-1 min-w-0">
-                  <span className={`text-[10px] font-bold uppercase tracking-wider ${
-                    action.type === 'regulation' ? 'text-teal-600 dark:text-teal-400' :
-                    action.type === 'productivity' ? 'text-blue-600 dark:text-blue-400' :
-                    'text-violet-600 dark:text-violet-400'
-                  }`}>{action.type}</span>
-                  <h4 className="text-sm font-semibold text-slate-800 dark:text-slate-100 mt-0.5">{action.title}</h4>
-                  <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 line-clamp-2">{action.description}</p>
-                  {action.link && (
-                    <Link to={action.link} className={`inline-flex items-center gap-1 mt-2 text-xs font-medium ${
-                      action.type === 'regulation' ? 'text-teal-600 hover:text-teal-700 dark:text-teal-400' :
-                      action.type === 'productivity' ? 'text-blue-600 hover:text-blue-700 dark:text-blue-400' :
-                      'text-violet-600 hover:text-violet-700 dark:text-violet-400'
-                    }`}>
-                      Start <ArrowRight className="w-3 h-3" />
-                    </Link>
-                  )}
+        {loadingWidgets ? (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="h-32 rounded-xl animate-shimmer" />
+            ))}
+          </div>
+        ) : (
+          <>
+            {/* Insight Layer */}
+            {mentalState.reasons.length > 0 && (
+              <div className="mb-4 p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row sm:items-start gap-3">
+                <Brain className="w-4 h-4 text-violet-500 mt-0.5 flex-shrink-0 hidden sm:block" />
+                <div className="flex-1">
+                  <p className="text-xs font-medium text-slate-700 dark:text-slate-300 flex items-center gap-1">
+                    <Brain className="w-3.5 h-3.5 text-violet-500 sm:hidden" /> Why you're seeing this plan:
+                  </p>
+                  <ul className="mt-1 space-y-0.5">
+                    {mentalState.reasons.slice(0, 2).map((reason, i) => (
+                      <li key={i} className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                        <span className="w-1 h-1 rounded-full bg-violet-400" /> {reason}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                {/* Soft Social Proof */}
+                <div className="sm:text-right mt-2 sm:mt-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-200 dark:border-slate-700">
+                  <p className="text-[10px] text-slate-400 dark:text-slate-500 italic">Thousands of students feel this way.</p>
+                  <p className="text-[10px] font-medium text-teal-600 dark:text-teal-400">You're not alone.</p>
                 </div>
               </div>
+            )}
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              {mentalState.dailyPlan.map((action, i) => (
+                <div key={i} className={`p-4 rounded-xl border-2 transition-all card-hover ${
+                  action.type === 'regulation' ? 'bg-teal-50 dark:bg-teal-900/10 border-teal-100 dark:border-teal-800' :
+                  action.type === 'productivity' ? 'bg-blue-50 dark:bg-blue-900/10 border-blue-100 dark:border-blue-800' :
+                  'bg-violet-50 dark:bg-violet-900/10 border-violet-100 dark:border-violet-800'
+                }`}>
+                  <div className="flex items-start gap-3">
+                    <span className="text-2xl">{action.icon}</span>
+                    <div className="flex-1 min-w-0">
+                      <span className={`text-[10px] font-bold uppercase tracking-wider ${
+                        action.type === 'regulation' ? 'text-teal-600 dark:text-teal-400' :
+                        action.type === 'productivity' ? 'text-blue-600 dark:text-blue-400' :
+                        'text-violet-600 dark:text-violet-400'
+                      }`}>{action.type}</span>
+                      <h4 className="text-sm font-semibold text-slate-800 dark:text-slate-100 mt-0.5">{action.title}</h4>
+                      <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 line-clamp-2">{action.description}</p>
+                      {action.link && (
+                        <Link to={action.link} className={`inline-flex items-center gap-1 mt-2 text-xs font-medium ${
+                          action.type === 'regulation' ? 'text-teal-600 hover:text-teal-700 dark:text-teal-400' :
+                          action.type === 'productivity' ? 'text-blue-600 hover:text-blue-700 dark:text-blue-400' :
+                          'text-violet-600 hover:text-violet-700 dark:text-violet-400'
+                        }`}>
+                          Start <ArrowRight className="w-3 h-3" />
+                        </Link>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
+          </>
+        )}
       </div>
 
       {/* Patterns/Warnings */}

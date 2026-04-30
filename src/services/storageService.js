@@ -13,6 +13,46 @@
 
 const PREFIX = 'mindwell_';
 
+// Helper to get JWT token from localStorage
+const getToken = () => {
+  try {
+    const user = JSON.parse(window.localStorage.getItem('mindwell_user'));
+    return user ? user.token : null;
+  } catch (e) {
+    return null;
+  }
+};
+
+// Helper to push log to backend
+const syncLogToBackend = async (key, data) => {
+  const token = getToken();
+  if (!token) return false;
+
+  try {
+    // Map local keys to backend types
+    let type = 'data';
+    if (key.includes('mood_entries')) type = 'mood';
+    else if (key.includes('journal_entries')) type = 'journal';
+    else if (key.includes('assessment_results')) type = 'assessment';
+    else if (key.includes('followup_data')) type = 'followup';
+    else type = key; // Fallback
+
+    const response = await fetch('/api/logs', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ type, data }),
+    });
+
+    return response.ok;
+  } catch (error) {
+    console.error('Failed to sync to backend, falling back to local storage');
+    return false;
+  }
+};
+
 const storageService = {
   // Generic CRUD operations
   get(key) {
@@ -27,7 +67,12 @@ const storageService = {
 
   set(key, value) {
     try {
-      localStorage.setItem(PREFIX + key, JSON.stringify(value));
+      const fullKey = `${PREFIX}${key}`;
+      const serializedValue = JSON.stringify(value);
+      window.localStorage.setItem(fullKey, serializedValue);
+      
+      // Attempt to sync to backend in the background
+      syncLogToBackend(key, value);
       return true;
     } catch (error) {
       console.error(`Error writing ${key}:`, error);

@@ -133,6 +133,9 @@ export default function useMentalStateEngine() {
     // --- Generate adaptive daily plan ---
     const dailyPlan = generateDailyPlan(state, isRecoveryMode, reasons);
 
+    // --- Calculate urgency flag ---
+    const urgency = state === 'crisis' ? 'high' : state === 'burnout-risk' ? 'medium' : 'low';
+
     return {
       state,
       stateLabel: getStateLabel(state),
@@ -143,6 +146,7 @@ export default function useMentalStateEngine() {
       dailyPlan,
       dataPoints,
       signals,
+      urgency,
     };
   }, [moodEntries, getLatestResult, followupData, habitData]);
 

@@ -79,6 +79,17 @@ html.dark {
   box-shadow: 0 8px 25px -5px rgba(0, 0, 0, 0.1);
 }
 
+.animate-shimmer {
+  animation: shimmer 3.5s infinite linear;
+  background: linear-gradient(to right, #f8fafc 4%, #f1f5f9 25%, #f8fafc 36%);
+  background-size: 1000px 100%;
+}
+
+.dark .animate-shimmer {
+  background: linear-gradient(to right, #0f172a 4%, #1e293b 25%, #0f172a 36%);
+  background-size: 1000px 100%;
+}
+
 /* Range input styling */
 input[type="range"] {
   -webkit-appearance: none;

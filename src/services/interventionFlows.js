@@ -178,6 +178,46 @@ const interventionFlows = {
       },
     ],
   },
+
+  talkToSomeone: {
+    id: 'talkToSomeone',
+    label: 'Talk to Someone (Journaling)',
+    emoji: '💬',
+    color: 'from-pink-400 to-rose-500',
+    softColor: 'bg-pink-50 dark:bg-pink-900/20 border-pink-200 dark:border-pink-800',
+    textColor: 'text-pink-700 dark:text-pink-300',
+    steps: [
+      {
+        id: 'greeting',
+        type: 'message',
+        title: 'I am here with you.',
+        subtitle: 'Whatever you want to share, I am listening without judgment.',
+        supportText: 'Whenever you\'re ready, let\'s start.',
+      },
+      {
+        id: 'vent',
+        type: 'journal-prompt',
+        title: 'What\'s on your mind?',
+        subtitle: 'Write down whatever is bothering you. Don\'t worry about spelling or grammar.',
+        prompt: 'Right now, I am struggling with...',
+        optional: false,
+      },
+      {
+        id: 'reframe',
+        type: 'journal-prompt',
+        title: 'Let\'s reflect on that',
+        subtitle: 'Sometimes our brains jump to the worst conclusion. Is there another way to look at this situation?',
+        prompt: 'A more balanced way to look at this is...',
+        optional: true,
+      },
+      {
+        id: 'check',
+        type: 'followup',
+        title: 'Did getting that out help?',
+        subtitle: 'Writing things down can often reduce their emotional weight.',
+      },
+    ],
+  },
 };
 
 export default interventionFlows;
