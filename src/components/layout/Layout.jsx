@@ -68,31 +68,44 @@ export default function Layout() {
   const SidebarContent = () => (
     <div className="flex flex-col h-full">
       {/* Logo */}
-      <div className="p-5 border-b border-slate-200 dark:border-slate-700">
+      <div style={{ padding: '24px 20px 20px', borderBottom: '1px solid var(--color-border)' }}>
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-teal-500 to-cyan-600 flex items-center justify-center shadow-lg shadow-teal-500/25">
-            <Heart className="w-5 h-5 text-white" />
+          <div style={{
+            width: 40, height: 40, borderRadius: 12,
+            background: 'linear-gradient(135deg, #C084FC, #F9A8D4)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            boxShadow: '0 4px 12px rgba(192,132,252,0.30)',
+          }}>
+            <Heart className="w-5 h-5" style={{ color: '#fff' }} />
           </div>
           <div>
-            <h1 className="text-lg font-bold text-slate-800 dark:text-slate-100">MindWell</h1>
-            <p className="text-xs text-slate-500 dark:text-slate-400">Student Mental Health</p>
+            <h1 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--color-text-primary)', lineHeight: 1.2 }}>MindWell</h1>
+            <p style={{ fontSize: '0.7rem', color: 'var(--color-placeholder)', marginTop: 1 }}>Student Mental Health</p>
           </div>
         </div>
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto p-3 space-y-1">
+      <nav style={{ flex: 1, overflowY: 'auto', padding: '12px 12px' }}>
         {navSections.map((section) => (
-          <div key={section.title} className="mb-2">
+          <div key={section.title} style={{ marginBottom: 4 }}>
             <button
               onClick={() => toggleSection(section.title)}
-              className="flex items-center justify-between w-full px-3 py-1.5 text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider hover:text-slate-600 dark:hover:text-slate-300"
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                width: '100%', padding: '6px 10px 4px',
+                fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.08em',
+                color: 'var(--color-placeholder)', textTransform: 'uppercase',
+                background: 'transparent', border: 'none', cursor: 'pointer',
+              }}
             >
               {section.title}
-              {collapsedSections[section.title] ? <ChevronRight className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+              {collapsedSections[section.title]
+                ? <ChevronRight style={{ width: 12, height: 12 }} />
+                : <ChevronDown style={{ width: 12, height: 12 }} />}
             </button>
             {!collapsedSections[section.title] && (
-              <div className="space-y-0.5 mt-0.5">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 2, marginTop: 2 }}>
                 {section.items.map((item) => {
                   const Icon = item.icon;
                   const isActive = location.pathname === item.path || (item.path !== '/' && location.pathname.startsWith(item.path));
@@ -101,16 +114,20 @@ export default function Layout() {
                       key={item.path}
                       to={item.path}
                       onClick={() => setSidebarOpen(false)}
-                      className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
-                        isActive
-                          ? 'bg-teal-50 text-teal-700 dark:bg-teal-900/30 dark:text-teal-300 shadow-sm'
-                          : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
-                      }`}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 10,
+                        padding: '9px 12px', borderRadius: 10,
+                        fontSize: '0.875rem', fontWeight: isActive ? 600 : 500,
+                        textDecoration: 'none',
+                        transition: 'all 0.2s ease',
+                        background: isActive ? 'var(--color-text-primary)' : 'transparent',
+                        color: isActive ? '#FFFFFF' : 'var(--color-text-secondary)',
+                      }}
                     >
-                      <Icon className={`w-4.5 h-4.5 ${isActive ? 'text-teal-600 dark:text-teal-400' : ''}`} />
+                      <Icon style={{ width: 16, height: 16, color: isActive ? '#F9A8D4' : '#B5B2C2', flexShrink: 0 }} />
                       <span>{item.label}</span>
                       {item.path === '/emergency' && (
-                        <span className="ml-auto w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                        <span style={{ marginLeft: 'auto', width: 7, height: 7, borderRadius: '50%', background: '#F87171', display: 'inline-block' }} />
                       )}
                     </NavLink>
                   );
@@ -122,29 +139,41 @@ export default function Layout() {
       </nav>
 
       {/* Bottom controls */}
-      <div className="p-4 border-t border-slate-200 dark:border-slate-700 space-y-3">
+      <div style={{ padding: '12px 12px 16px', borderTop: '1px solid #F0E8F8' }}>
         <button
           onClick={toggleTheme}
-          className="flex items-center gap-3 w-full px-3 py-2 rounded-lg text-sm text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+          style={{
+            display: 'flex', alignItems: 'center', gap: 10,
+            width: '100%', padding: '9px 12px', borderRadius: 10,
+            fontSize: '0.875rem', fontWeight: 500, color: 'var(--color-text-secondary)',
+            background: 'transparent', border: 'none', cursor: 'pointer',
+            transition: 'all 0.2s ease',
+          }}
         >
-          {darkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+          {darkMode
+            ? <Sun style={{ width: 16, height: 16 }} />
+            : <Moon style={{ width: 16, height: 16 }} />}
           <span>{darkMode ? 'Light Mode' : 'Dark Mode'}</span>
         </button>
-        <div className="px-3 py-2 rounded-lg bg-slate-100 dark:bg-slate-800">
-          <div className="flex items-center gap-2 mb-1">
-            <Shield className="w-3.5 h-3.5 text-teal-600" />
-            <span className="text-xs font-medium text-slate-700 dark:text-slate-300">Privacy First</span>
+        <div style={{
+          marginTop: 8, padding: '10px 12px', borderRadius: 10,
+          background: 'linear-gradient(135deg, rgba(192,132,252,0.08), rgba(249,168,212,0.08))',
+          border: '1px solid rgba(192,132,252,0.15)',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+            <Shield style={{ width: 13, height: 13, color: '#C084FC' }} />
+            <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-text-primary)' }}>Privacy First</span>
           </div>
-          <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-tight">All data stored locally on your device. Nothing is shared.</p>
+          <p style={{ fontSize: '0.68rem', color: 'var(--color-placeholder)', lineHeight: 1.4 }}>All data stored locally on your device. Nothing is shared.</p>
         </div>
       </div>
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 transition-colors duration-300">
+    <div style={{ minHeight: '100vh', backgroundColor: 'var(--color-background)' }}>
       {/* Mobile header */}
-      <header className="lg:hidden fixed top-0 left-0 right-0 z-40 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-slate-200 dark:border-slate-700">
+      <header className="lg:hidden fixed top-0 left-0 right-0 z-40" style={{ background: 'rgba(255,255,255,0.85)', backdropFilter: 'blur(12px)', borderBottom: '1px solid #F0E8F8' }}>
         <div className="flex items-center justify-between px-4 h-14">
           <button onClick={() => setSidebarOpen(true)} className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400">
             <Menu className="w-5 h-5" />
@@ -175,14 +204,14 @@ export default function Layout() {
       )}
 
       {/* Desktop sidebar */}
-      <aside className="hidden lg:flex lg:flex-col lg:fixed lg:left-0 lg:top-0 lg:bottom-0 lg:w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-700 z-30">
+      <aside className="hidden lg:flex lg:flex-col lg:fixed lg:left-0 lg:top-0 lg:bottom-0 lg:w-64 z-30" style={{ background: 'var(--color-card)', borderRight: '1px solid var(--color-border)' }}>
         <SidebarContent />
       </aside>
 
       {/* Main content */}
       <main className="lg:ml-64 min-h-screen pt-14 lg:pt-0">
         {/* Desktop top bar */}
-        <div className="hidden lg:flex items-center justify-between px-8 py-4 border-b border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl sticky top-0 z-20">
+        <div className="hidden lg:flex items-center justify-between px-8 py-4 sticky top-0 z-20" style={{ background: 'var(--color-card)', backdropFilter: 'blur(12px)', borderBottom: '1px solid var(--color-border)', opacity: 0.96 }}>
           <div className="relative">
             <button
               onClick={() => setSearchOpen(!searchOpen)}
@@ -263,18 +292,19 @@ export default function Layout() {
         </div>
       )}
 
-      {/* Floating Action Buttons */}
       <div className="fixed bottom-6 right-6 z-30 flex flex-col gap-3 items-end">
         <button
           onClick={() => setInterventionOpen(true)}
-          className="px-5 py-3.5 rounded-full bg-slate-800 dark:bg-slate-100 text-white dark:text-slate-800 shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 flex items-center gap-2 group border border-slate-700 dark:border-slate-200"
+          className="px-5 py-3.5 rounded-full shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 flex items-center gap-2 group"
+          style={{ background: '#C084FC', color: '#fff', boxShadow: '0 4px 20px rgba(192,132,252,0.40)' }}
         >
-          <Heart className="w-5 h-5 group-hover:animate-pulse text-rose-400 dark:text-rose-500" />
+          <Heart className="w-5 h-5 group-hover:animate-pulse" style={{ color: '#F9A8D4' }} />
           <span className="text-sm font-medium pr-1">I'm not okay right now</span>
         </button>
         <button
           onClick={() => navigate('/emergency')}
-          className="w-14 h-14 rounded-full bg-gradient-to-br from-red-500 to-rose-600 text-white shadow-lg shadow-red-500/30 hover:shadow-red-500/50 hover:scale-105 transition-all duration-200 flex items-center justify-center group"
+          className="w-14 h-14 rounded-full text-white shadow-lg hover:scale-105 transition-all duration-200 flex items-center justify-center group"
+          style={{ background: 'linear-gradient(135deg, #F87171, #FCA5A5)', boxShadow: '0 4px 16px rgba(248,113,113,0.35)' }}
           aria-label="Emergency help"
           title="Need help now?"
         >

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
-import { Heart, TrendingUp, BookOpen, Sparkles, AlertTriangle, ArrowRight, Calendar, Brain, ClipboardList, Lightbulb, ShieldCheck, MessageCircle } from 'lucide-react';
+import { Heart, TrendingUp, BookOpen, Sparkles, AlertTriangle, ArrowRight, Calendar, Brain, ClipboardList, Lightbulb, ShieldCheck, MessageCircle, Flame, Wind } from 'lucide-react';
 import useMoodData from '@/hooks/useMoodData';
 import useJournal from '@/hooks/useJournal';
 import useAssessmentResults from '@/hooks/useAssessmentResults';
@@ -18,6 +18,7 @@ export default function DashboardPage() {
   const mentalState = useMentalStateEngine();
   const { user } = useAuth();
   const [interventionOpen, setInterventionOpen] = useState(false);
+  const [interventionFlow, setInterventionFlow] = useState(null);
 
   const [loadingWidgets, setLoadingWidgets] = useState(true);
 
@@ -48,11 +49,49 @@ export default function DashboardPage() {
     <div className="space-y-6 animate-page-enter">
       {/* Intervention Mode overlay */}
       {interventionOpen && (
-        <InterventionMode onClose={() => setInterventionOpen(false)} />
+        <InterventionMode 
+          onClose={() => { setInterventionOpen(false); setInterventionFlow(null); }} 
+          initialFlow={interventionFlow} 
+        />
       )}
 
+      {/* ── TOP ACTION BANNERS ─────────────────────────── */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <button 
+          onClick={() => { setInterventionFlow('burnFlow'); setInterventionOpen(true); }}
+          className="relative overflow-hidden rounded-2xl p-5 text-left transition-all hover:scale-[1.02] active:scale-95"
+          style={{ background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)', border: '1px solid #334155', boxShadow: '0 4px 12px rgba(0,0,0,0.2)' }}
+        >
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-orange-500/20">
+              <Flame className="w-6 h-6 text-orange-500" />
+            </div>
+            <div>
+              <h3 className="text-white font-bold text-lg">Burn a Thought</h3>
+              <p className="text-slate-400 text-sm">Write it down and watch it burn away</p>
+            </div>
+          </div>
+        </button>
+        
+        <button 
+          onClick={() => { setInterventionFlow('bubbleFlow'); setInterventionOpen(true); }}
+          className="relative overflow-hidden rounded-2xl p-5 text-left transition-all hover:scale-[1.02] active:scale-95"
+          style={{ background: 'linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%)', border: '1px solid #7dd3fc', boxShadow: '0 4px 12px rgba(14,165,233,0.1)' }}
+        >
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-sky-500/20">
+              <Wind className="w-6 h-6 text-sky-600" />
+            </div>
+            <div>
+              <h3 className="text-sky-900 font-bold text-lg">Pop Stress Bubbles</h3>
+              <p className="text-sky-700 text-sm">Tap away your anxiety and tension</p>
+            </div>
+          </div>
+        </button>
+      </div>
+
       {/* ── PROMINENT SUPPORT HERO CARD ─────────────────── */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-600 via-indigo-700 to-purple-800 p-6 sm:p-8 shadow-lg">
+      <div className="relative overflow-hidden rounded-2xl p-6 sm:p-8" style={{ background: 'linear-gradient(135deg, #0F766E 0%, #14B8A6 50%, #0EA5E9 100%)', boxShadow: '0 8px 32px rgba(15,118,110,0.30)' }}>
         {/* Decorative blobs */}
         <div className="absolute -top-8 -right-8 w-40 h-40 rounded-full bg-white/5" />
         <div className="absolute bottom-0 left-20 w-24 h-24 rounded-full bg-white/5" />
@@ -69,14 +108,14 @@ export default function DashboardPage() {
           </div>
           <button
             onClick={() => setInterventionOpen(true)}
-            className="flex-shrink-0 flex items-center gap-3 px-6 py-4 bg-white hover:bg-indigo-50 text-indigo-700 font-semibold rounded-2xl shadow-md transition-all hover:scale-105 active:scale-95"
+            className="flex-shrink-0 flex items-center gap-3 px-6 py-4 font-semibold rounded-2xl shadow-md transition-all hover:scale-105 active:scale-95"
+            style={{ background: '#0F766E', color: '#fff', boxShadow: '0 4px 16px rgba(15,118,110,0.35)' }}
           >
             <MessageCircle className="w-5 h-5" />
             Get Support Now
           </button>
         </div>
 
-        {/* Quick topic chips */}
         <div className="relative mt-5 flex flex-wrap gap-2">
           {[
             { label: 'Anxiety', emoji: '😰' },
@@ -88,28 +127,25 @@ export default function DashboardPage() {
             <button
               key={chip.label}
               onClick={() => setInterventionOpen(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/15 hover:bg-white/25 text-white text-xs font-medium transition-all"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all"
+              style={{ background: 'rgba(255,255,255,0.22)', color: '#fff', border: '1px solid rgba(255,255,255,0.3)' }}
             >
               <span>{chip.emoji}</span> {chip.label}
             </button>
           ))}
         </div>
       </div>
-      {/* Live Activity & Welcome Section */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700">
+      {/* Welcome Section */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 rounded-2xl" style={{ background: 'var(--color-card)', boxShadow: '0 2px 12px rgba(15,118,110,0.08)', border: '1px solid var(--color-border)' }}>
         <div>
-          <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">
+          <h1 className="text-2xl font-bold" style={{ color: '#2D2A32' }}>
             Welcome back, {user?.name?.split(' ')[0] || 'Friend'} 👋
           </h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Here's how you've been doing lately.</p>
+          <p className="text-sm mt-1" style={{ color: '#7E7A8A' }}>Here's how you've been doing lately.</p>
         </div>
-        
-        {/* Ethical Reassurance Widget */}
-        <div className="flex items-center gap-3 px-4 py-2.5 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-full">
-          <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-          <span className="text-xs font-medium text-slate-600 dark:text-slate-300">
-            This space is private and judgment-free. It's okay to ask for help.
-          </span>
+        <div className="flex items-center gap-3 px-4 py-2.5 rounded-full" style={{ background: 'rgba(15,118,110,0.08)', border: '1px solid rgba(15,118,110,0.20)' }}>
+          <ShieldCheck className="w-4 h-4" style={{ color: '#0F766E' }} />
+          <span className="text-xs font-medium" style={{ color: '#7E7A8A' }}>This space is private and judgment-free. It's okay to ask for help.</span>
         </div>
       </div>
 
@@ -132,15 +168,15 @@ export default function DashboardPage() {
       )}
 
       {/* Daily tip */}
-      <div className="p-5 rounded-xl bg-gradient-to-r from-teal-50 to-cyan-50 dark:from-teal-900/20 dark:to-cyan-900/20 border border-teal-100 dark:border-teal-800">
+      <div className="p-5 rounded-2xl" style={{ background: 'linear-gradient(135deg, rgba(15,118,110,0.07), rgba(14,165,233,0.07))', border: '1px solid rgba(15,118,110,0.15)' }}>
         <div className="flex items-start gap-3">
-          <div className="w-10 h-10 rounded-lg bg-teal-100 dark:bg-teal-900/40 flex items-center justify-center flex-shrink-0">
-            <Lightbulb className="w-5 h-5 text-teal-600 dark:text-teal-400" />
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: 'linear-gradient(135deg, #0F766E, #0EA5E9)' }}>
+            <Lightbulb className="w-5 h-5" style={{ color: '#fff' }} />
           </div>
           <div>
-            <p className="text-xs font-semibold text-teal-600 dark:text-teal-400 uppercase tracking-wider mb-1">Daily Tip</p>
-            <p className="text-sm text-slate-700 dark:text-slate-300">{todayTip.text}</p>
-            <p className="text-xs text-slate-400 mt-1">Source: {todayTip.source}</p>
+            <p className="text-xs font-semibold uppercase tracking-wider mb-1" style={{ color: '#0F766E' }}>Daily Tip</p>
+            <p className="text-sm" style={{ color: 'var(--color-text-primary)' }}>{todayTip.text}</p>
+            <p className="text-xs mt-1" style={{ color: 'var(--color-placeholder)' }}>Source: {todayTip.source}</p>
           </div>
         </div>
       </div>
@@ -214,17 +250,18 @@ export default function DashboardPage() {
               <AreaChart data={recentMoods}>
                 <defs>
                   <linearGradient id="moodGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#14b8a6" stopOpacity={0.3} />
-                    <stop offset="100%" stopColor="#14b8a6" stopOpacity={0} />
+                    <stop offset="0%" stopColor="#0F766E" stopOpacity={0.25} />
+                    <stop offset="100%" stopColor="#0EA5E9" stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                <XAxis dataKey="createdAt" tickFormatter={(v) => formatDate(v)} tick={{ fontSize: 11 }} stroke="#94a3b8" />
-                <YAxis domain={[0, 10]} tick={{ fontSize: 11 }} stroke="#94a3b8" />
-                <Tooltip labelFormatter={(v) => formatDate(v, 'medium')} />
-                <Area type="monotone" dataKey="mood" stroke="#14b8a6" fill="url(#moodGradient)" strokeWidth={2} dot={{ r: 3 }} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#E9E6F2" />
+                <XAxis dataKey="createdAt" tickFormatter={(v) => formatDate(v)} tick={{ fontSize: 11, fill: '#7E7A8A' }} stroke="#E9E6F2" />
+                <YAxis domain={[0, 10]} tick={{ fontSize: 11, fill: '#7E7A8A' }} stroke="#E9E6F2" />
+                <Tooltip labelFormatter={(v) => formatDate(v, 'medium')} contentStyle={{ borderRadius: 12, border: '1px solid #E9E6F2', boxShadow: '0 4px 16px rgba(15,118,110,0.12)' }} />
+                <Area type="monotone" dataKey="mood" stroke="#0F766E" fill="url(#moodGradient)" strokeWidth={2.5} dot={{ r: 3, fill: '#0F766E', stroke: '#fff', strokeWidth: 2 }} />
               </AreaChart>
             </ResponsiveContainer>
+
           ) : (
             <div className="h-[180px] flex flex-col items-center justify-center text-slate-400 dark:text-slate-500">
               <Heart className="w-8 h-8 mb-2 opacity-50" />
@@ -375,24 +412,39 @@ export default function DashboardPage() {
 
       {/* Quick actions */}
       <div>
-        <h3 className="font-semibold text-slate-800 dark:text-slate-100 mb-3">Quick Actions</h3>
+        <h3 className="font-semibold mb-3" style={{ color: 'var(--color-text-primary)' }}>Quick Actions</h3>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
-            { to: '/mood', icon: Heart, label: 'Log Mood', color: 'text-rose-500 bg-rose-50 dark:bg-rose-900/20' },
-            { to: '/journal', icon: BookOpen, label: 'Write Journal', color: 'text-blue-500 bg-blue-50 dark:bg-blue-900/20' },
-            { to: '/assessments', icon: ClipboardList, label: 'Take Assessment', color: 'text-violet-500 bg-violet-50 dark:bg-violet-900/20' },
-            { to: '/toolkit', icon: Sparkles, label: 'Wellness Tools', color: 'text-teal-500 bg-teal-50 dark:bg-teal-900/20' },
-          ].map((action) => (
-            <Link
-              key={action.to}
-              to={action.to}
-              className="flex flex-col items-center gap-2 p-4 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 card-hover text-center"
-            >
-              <div className={`w-10 h-10 rounded-xl ${action.color} flex items-center justify-center`}>
-                <action.icon className="w-5 h-5" />
-              </div>
-              <span className="text-xs font-medium text-slate-600 dark:text-slate-300">{action.label}</span>
-            </Link>
+            { to: '/mood',        icon: Heart,         label: 'Log Mood',        bg: 'rgba(15,118,110,0.12)', iconColor: '#0F766E' },
+            { to: '/journal',     icon: BookOpen,      label: 'Write Journal',   bg: 'rgba(14,165,233,0.15)', iconColor: '#38BDF8' },
+            { to: '/assessments', icon: ClipboardList, label: 'Assessment',      bg: 'rgba(20,184,166,0.12)', iconColor: '#14B8A6' },
+            { to: '/toolkit',     icon: Sparkles,      label: 'Wellness',        bg: 'rgba(110,231,183,0.15)', iconColor: '#10B981' },
+          ].map((action, idx) => (
+            action.to ? (
+              <Link
+                key={action.to}
+                to={action.to}
+                className="flex flex-col items-center gap-2 p-3 sm:p-4 rounded-2xl card-hover text-center"
+                style={{ background: 'var(--color-card)', border: '1px solid var(--color-border)', boxShadow: '0 2px 8px rgba(15,118,110,0.08)' }}
+              >
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: action.bg }}>
+                  <action.icon className="w-5 h-5" style={{ color: action.iconColor }} />
+                </div>
+                <span className="text-[11px] sm:text-xs font-medium" style={{ color: 'var(--color-text-secondary)' }}>{action.label}</span>
+              </Link>
+            ) : (
+              <button
+                key={idx}
+                onClick={action.onClick}
+                className="flex flex-col items-center gap-2 p-3 sm:p-4 rounded-2xl card-hover text-center"
+                style={{ background: 'var(--color-card)', border: '1px solid var(--color-border)', boxShadow: '0 2px 8px rgba(15,118,110,0.08)' }}
+              >
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: action.bg }}>
+                  <action.icon className="w-5 h-5" style={{ color: action.iconColor }} />
+                </div>
+                <span className="text-[11px] sm:text-xs font-medium" style={{ color: 'var(--color-text-secondary)' }}>{action.label}</span>
+              </button>
+            )
           ))}
         </div>
       </div>
